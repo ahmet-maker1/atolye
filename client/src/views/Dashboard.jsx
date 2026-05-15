@@ -7,13 +7,17 @@ import {
 } from 'recharts';
 import { api, tl } from '../lib/api';
 import { C, Card, KPI, SectionLabel, StatusPill, PhoneThumb } from '../components/ui';
+import BarcodeScanner from '../components/BarcodeScanner';
+import { useToast } from '../components/Toast';
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const [quickSearch, setQuickSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [scanning, setScanning] = useState(false);
   const navigate = useNavigate();
+  const { push } = useToast();
 
   useEffect(() => {
     api.dashboard().then(setData).catch(e => setErr(e.message));
@@ -62,14 +66,28 @@ export default function Dashboard() {
       {/* Quick IMEI search */}
       <div className="relative">
         <div className="flex items-stretch border-2" style={{ borderColor: C.ink, background: C.paperLite }}>
-          <div className="px-3 sm:px-4 flex items-center border-r" style={{ borderColor: C.line }}>
+          <button
+            type="button"
+            onClick={() => setScanning(true)}
+            title="Kamera ile barkodu tara"
+            className="px-3 sm:px-4 flex items-center border-r hover:bg-black/5 transition-colors"
+            style={{ borderColor: C.line, cursor: 'pointer' }}>
             <ScanLine size={18} style={{ color: C.accent }} />
-          </div>
+          </button>
           <input value={quickSearch} onChange={e => setQuickSearch(e.target.value)}
             placeholder="HIZLI IMEI SORGUSU..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && searchResults[0]) {
+                navigate(`/devices/${searchResults[0].id}`);
+              }
+            }}
             className="flex-1 min-w-0 bg-transparent px-3 sm:px-4 py-3 sm:py-4 text-sm sm:text-base outline-none font-mono"
             style={{ color: C.ink }} />
-          <button className="px-3 sm:px-6 flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-mono"
+          <button
+            type="button"
+            onClick={() => searchResults[0] && navigate(`/devices/${searchResults[0].id}`)}
+            disabled={!searchResults[0]}
+            className="px-3 sm:px-6 flex items-center gap-2 text-xs uppercase tracking-[0.15em] font-mono disabled:opacity-40"
             style={{ background: C.ink, color: C.paper }}>
             <Search size={14} /> <span className="hidden sm:inline">sorgula</span>
           </button>
@@ -217,6 +235,35 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* IMEI barkod scanner */}
+      <BarcodeScanner
+        isOpen={scanning}
+        onClose={() => setScanning(false)}
+        title="IMEI ile cihaz ara"
+        hint="Telefonun arkasındaki barkodu tara"
+        onResult={async (text) => {
+          setScanning(false);
+          const imei = String(text).replace(/\D/g, '');
+          if (imei.length < 8) {
+            push({ kind: 'warn', message: `Okunan: "${text}" — IMEI değil. Tekrar dene.` });
+            return;
+          }
+          try {
+            const list = await api.devicesList({ q: imei });
+            const match = list.find(d => d.imei === imei) || list[0];
+            if (match) {
+              push({ kind: 'success', message: `${match.brand} ${match.model} bulundu` });
+              navigate(`/devices/${match.id}`);
+            } else {
+              push({ kind: 'warn', title: 'Bulunamadı', message: `IMEI ${imei} kayıtlı değil.`, duration: 6000 });
+              setQuickSearch(imei);
+            }
+          } catch (e) {
+            push({ kind: 'error', message: e.message });
+          }
+        }}
+      />
     </div>
   );
 }
