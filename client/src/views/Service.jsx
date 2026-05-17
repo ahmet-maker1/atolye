@@ -275,7 +275,6 @@ function ServiceForm({ onClose, onSaved }) {
             </div>
           ) : (
             <>
-            <>
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
                   Cihaz bilgisi *
