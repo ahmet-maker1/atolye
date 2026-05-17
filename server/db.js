@@ -32,6 +32,15 @@ export function initSchema() {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
 
+  // Eski upload path'lerini yeni proxy-uyumlu path'e çevir (idempotent)
+  try {
+    db.exec(`
+      UPDATE devices
+        SET image_urls = REPLACE(image_urls, '"/uploads/', '"/api/uploads/')
+        WHERE image_urls LIKE '%"/uploads/%'
+    `);
+  } catch (_) { /* tablo yoksa veya değişiklik yoksa sorun değil */ }
+
   console.log('✓ Schema initialized at', DB_PATH);
 }
 

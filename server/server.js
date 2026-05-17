@@ -95,6 +95,9 @@ const UPLOADS_DIR = process.env.UPLOADS_DIR
   || (process.env.DATA_DIR ? path.join(process.env.DATA_DIR, 'uploads') : path.join(__dirname, 'uploads'));
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
+// Coolify/nginx reverse proxy genelde sadece /api/*'i backend'e yönlendiriyor.
+// Bu yüzden upload'ları /api/uploads altından da serve et — frontend bu URL'i kullanır.
+app.use('/api/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 
 // ─── API routes ──────────────────────────────────────────────────
 app.use('/api/devices',      devicesRouter);

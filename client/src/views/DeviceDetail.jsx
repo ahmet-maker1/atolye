@@ -36,6 +36,7 @@ export default function DeviceDetail() {
   const [action, setAction] = useState(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showNote, setShowNote] = useState(false);
+  const [stickerSize, setStickerSize] = useState(() => localStorage.getItem('atolye_sticker_size') || '60x40');
 
   const load = () => api.device(id).then(setDevice).catch(e => setErr(e.message));
   useEffect(() => { load(); }, [id]);
@@ -162,8 +163,28 @@ export default function DeviceDetail() {
             </Card>
           </div>
 
+          {/* Etiket boyutu seçici */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
+              Etiket boyutu
+            </label>
+            <select
+              value={stickerSize}
+              onChange={(e) => {
+                setStickerSize(e.target.value);
+                localStorage.setItem('atolye_sticker_size', e.target.value);
+              }}
+              className="w-full px-3 py-2 text-sm border outline-none font-mono mb-2"
+              style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}>
+              <option value="60x40">60 × 40 mm — standart termal</option>
+              <option value="50x30">50 × 30 mm — orta boy</option>
+              <option value="40x25">40 × 25 mm — kompakt</option>
+              <option value="40x17">40 × 17 mm — dar / 2-up yazıcı</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => printStickers('60x40')}
+            <button onClick={() => printStickers(stickerSize)}
               className="py-2.5 text-xs inline-flex items-center justify-center gap-2 border font-mono"
               style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
               <Printer size={13} /> YAZDIR
@@ -172,7 +193,7 @@ export default function DeviceDetail() {
               const el = document.querySelector('.print-area .atolye-sticker');
               if (!el) return push({ kind: 'error', message: 'Sticker hazır değil.' });
               try {
-                await downloadStickerAsPng(el, `${device.code}-${device.imei.slice(-4)}.png`);
+                await downloadStickerAsPng(el, `${device.code}-${device.imei.slice(-4)}-${stickerSize}.png`);
                 push({ kind: 'success', message: 'PNG indirildi.' });
               } catch (e) {
                 push({ kind: 'error', message: e.message });
@@ -392,7 +413,7 @@ export default function DeviceDetail() {
 
       {/* Yazıcıya gönderilecek etiket (normal görünümde gizli) */}
       <div className="print-area">
-        <PrintableSticker device={device} qrUrl={qrUrl} size="60x40" config={loadStickerConfig()} />
+        <PrintableSticker device={device} qrUrl={qrUrl} size={stickerSize} config={loadStickerConfig()} />
       </div>
     </div>
   );

@@ -243,7 +243,7 @@ router.post('/:id/photos', upload.array('photos', 10), (req, res) => {
   if (!dev) return res.status(404).json({ error: 'Cihaz bulunamadı' });
 
   const current = JSON.parse(dev.image_urls || '[]');
-  const newPaths = (req.files || []).map(f => `/uploads/${f.filename}`);
+  const newPaths = (req.files || []).map(f => `/api/uploads/${f.filename}`);
   const all = [...current, ...newPaths];
 
   db.prepare("UPDATE devices SET image_urls = ?, updated_at = datetime('now') WHERE id = ?")
@@ -263,8 +263,8 @@ router.delete('/:id/photos/:idx', (req, res) => {
 
   const removed = list.splice(idx, 1)[0];
 
-  // Delete the actual file (best effort)
-  if (removed && removed.startsWith('/uploads/')) {
+  // Delete the actual file (best effort) — eski /uploads/ veya yeni /api/uploads/ path'ini handle et
+  if (removed && (removed.startsWith('/uploads/') || removed.startsWith('/api/uploads/'))) {
     const filepath = path.join(UPLOADS_DIR, path.basename(removed));
     try { fs.unlinkSync(filepath); } catch (_) {}
   }
