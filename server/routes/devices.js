@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logAction } from '../lib/audit.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,15 +67,11 @@ router.get('/', (req, res) => {
   const { status, q, include_deleted } = req.query;
   let sql = `
     SELECT d.*,
-      s.name AS supplier_name,
-      c.name AS customer_name,
       (d.buy_price + d.expenses) AS total_cost,
       CASE WHEN d.sell_price > 0
            THEN d.sell_price - (d.buy_price + d.expenses)
            ELSE NULL END AS profit
     FROM devices d
-    LEFT JOIN customers s ON s.id = d.supplier_id
-    LEFT JOIN customers c ON c.id = d.customer_id
     WHERE 1=1
   `;
   const params = [];
@@ -99,15 +96,11 @@ router.get('/:id', (req, res) => {
   const id = req.params.id;
   const device = db.prepare(`
     SELECT d.*,
-      s.name AS supplier_name, s.code AS supplier_code,
-      c.name AS customer_name, c.code AS customer_code,
       (d.buy_price + d.expenses) AS total_cost,
       CASE WHEN d.sell_price > 0
            THEN d.sell_price - (d.buy_price + d.expenses)
            ELSE NULL END AS profit
     FROM devices d
-    LEFT JOIN customers s ON s.id = d.supplier_id
-    LEFT JOIN customers c ON c.id = d.customer_id
     WHERE d.id = ?
   `).get(id);
   if (!device) return res.status(404).json({ error: 'Cihaz bulunamadı' });
@@ -128,8 +121,8 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   const {
     imei, brand, model, color, storage, ram, battery,
-    screen, condition, shelf, buy_price, supplier_id, note,
-    status, created_by,
+    screen, condition, shelf, buy_price, supplier_name, note,
+    status, created_by, warranty_end,
   } = req.body;
 
   if (!imei || !brand || !model) {
@@ -142,38 +135,52 @@ router.post('/', (req, res) => {
   const stmt = db.prepare(`
     INSERT INTO devices (
       code, imei, brand, model, color, storage, ram, battery,
-      screen, condition, shelf, buy_price, supplier_id, note,
-      status, qr_token, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      screen, condition, shelf, buy_price, supplier_name, note,
+      status, qr_token, created_by, warranty_end
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const info = stmt.run(
     code, imei, brand, model, color, storage, ram, battery,
-    screen, condition, shelf, buy_price || 0, supplier_id, note,
-    status || 'stokta', qr_token, created_by
+    screen, condition, shelf, buy_price || 0, supplier_name || null, note,
+    status || 'stokta', qr_token, created_by, warranty_end || null
   );
 
-  if (buy_price > 0 && supplier_id) {
-    const supplier = db.prepare('SELECT name FROM customers WHERE id = ?').get(supplier_id);
+  if (buy_price > 0) {
     db.prepare(`
-      INSERT INTO transactions (device_id, type, amount, counterparty_id, counterparty_name, note, created_by)
-      VALUES (?, 'purchase', ?, ?, ?, 'Cihaz alımı', ?)
-    `).run(info.lastInsertRowid, buy_price, supplier_id, supplier?.name, created_by);
+      INSERT INTO transactions (device_id, type, amount, counterparty_name, note, created_by)
+      VALUES (?, 'purchase', ?, ?, 'Cihaz alımı', ?)
+    `).run(info.lastInsertRowid, buy_price, supplier_name || null, created_by);
   }
 
   const created = db.prepare('SELECT * FROM devices WHERE id = ?').get(info.lastInsertRowid);
   created.image_urls = JSON.parse(created.image_urls || '[]');
+
+  logAction({
+    req,
+    action: 'create',
+    entity: 'device',
+    entityId: created.id,
+    entityLabel: `${created.code} ${created.brand} ${created.model}`,
+    changes: { imei, brand, model, buy_price: buy_price || 0, supplier_name: supplier_name || null },
+  });
+
   res.status(201).json(created);
 });
 
 // ─── PATCH /api/devices/:id ──────────────────────────────────────
 router.patch('/:id', (req, res) => {
-  const fields = ['color','storage','ram','battery','screen','condition','shelf','status','note','sell_price','image_urls'];
+  const fields = ['brand','model','color','storage','ram','battery','screen','condition','shelf','status','note','sell_price','image_urls','warranty_end','supplier_name','customer_name','buy_price'];
+  const before = db.prepare('SELECT code, brand, model FROM devices WHERE id = ?').get(req.params.id);
+  if (!before) return res.status(404).json({ error: 'Cihaz bulunamadı' });
+
   const updates = [];
   const params = [];
+  const changedKeys = [];
   for (const f of fields) {
     if (req.body[f] !== undefined) {
       updates.push(`${f} = ?`);
       params.push(f === 'image_urls' ? JSON.stringify(req.body[f]) : req.body[f]);
+      if (f !== 'image_urls') changedKeys.push(f);
     }
   }
   if (!updates.length) return res.status(400).json({ error: 'Güncellenecek alan yok' });
@@ -182,14 +189,33 @@ router.patch('/:id', (req, res) => {
   db.prepare(`UPDATE devices SET ${updates.join(', ')} WHERE id = ?`).run(...params);
   const updated = db.prepare('SELECT * FROM devices WHERE id = ?').get(req.params.id);
   updated.image_urls = JSON.parse(updated.image_urls || '[]');
+
+  logAction({
+    req,
+    action: 'update',
+    entity: 'device',
+    entityId: updated.id,
+    entityLabel: `${before.code} ${before.brand} ${before.model}`,
+    changes: { fields: changedKeys },
+  });
+
   res.json(updated);
 });
 
 // ─── DELETE /api/devices/:id  (soft delete, Admin only) ─────────
 router.delete('/:id', requireRole('Admin'), (req, res) => {
-  const dev = db.prepare('SELECT id FROM devices WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+  const dev = db.prepare('SELECT id, code, brand, model FROM devices WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
   if (!dev) return res.status(404).json({ error: 'Cihaz bulunamadı' });
   db.prepare("UPDATE devices SET deleted_at = datetime('now') WHERE id = ?").run(req.params.id);
+
+  logAction({
+    req,
+    action: 'delete',
+    entity: 'device',
+    entityId: dev.id,
+    entityLabel: `${dev.code} ${dev.brand} ${dev.model}`,
+  });
+
   res.json({ deleted: true, id: dev.id });
 });
 
@@ -199,6 +225,15 @@ router.post('/:id/restore', requireRole('Admin'), (req, res) => {
   if (!info.changes) return res.status(404).json({ error: 'Cihaz bulunamadı' });
   const dev = db.prepare('SELECT * FROM devices WHERE id = ?').get(req.params.id);
   dev.image_urls = JSON.parse(dev.image_urls || '[]');
+
+  logAction({
+    req,
+    action: 'restore',
+    entity: 'device',
+    entityId: dev.id,
+    entityLabel: `${dev.code} ${dev.brand} ${dev.model}`,
+  });
+
   res.json(dev);
 });
 

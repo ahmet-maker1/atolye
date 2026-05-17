@@ -64,6 +64,35 @@ const darkColors = {
   chartGrid:  '#403A30',
 };
 
+// Retail — Walmart benzeri: beyaz zemin, mavi vurgu, sarı detay
+const retailColors = {
+  paper:      '#FFFFFF',
+  paperDeep:  '#F2F5F8',
+  paperLite:  '#FFFFFF',
+  ink:        '#1A2330',
+  inkSoft:    '#3D4856',
+  muted:      '#7C8896',
+  line:       '#D9DEE5',
+  accent:     '#0171CE',     // Walmart mavisi
+  accentDeep: '#005AA8',
+  ok:         '#2E8B57',
+  warn:       '#FCB61A',     // Walmart sarısı — uyarı/vurgu
+  bad:        '#D63B2F',
+  surface:    '#FFFFFF',
+  surfaceDeep:'#F2F5F8',
+  pillOk:     '#E3F0E8',
+  pillWarn:   '#FEF3D6',
+  pillBad:    '#FBE2DF',
+  pillNeutral:'#EAEEF3',
+  pillMuted:  '#F2F5F8',
+  chartA:     '#0171CE',
+  chartB:     '#FCB61A',
+  chartC:     '#2E8B57',
+  chartD:     '#7C8896',
+  chartE:     '#D63B2F',
+  chartGrid:  '#D9DEE5',
+};
+
 // `C` is a mutable singleton. Components import it directly and read its
 // keys inline. ThemeProvider mutates it via Object.assign on theme change
 // AND triggers a re-render via state, so React reads the new values.
@@ -72,19 +101,26 @@ export const C = { ...lightColors };
 // ─── Theme Context ───────────────────────────────────────────────
 const ThemeContext = createContext({ theme: 'light', setTheme: () => {}, toggle: () => {} });
 
+// 3 tema desteği — editorial (light), midnight (dark), retail (walmart-style)
+const THEMES = {
+  light:  lightColors,
+  dark:   darkColors,
+  retail: retailColors,
+};
+
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
     if (typeof window === 'undefined') return 'light';
-    return localStorage.getItem('atolye_theme') || 'light';
+    const saved = localStorage.getItem('atolye_theme');
+    return THEMES[saved] ? saved : 'light';
   });
 
   // Apply theme: mutate C + set <html data-theme> + persist
   useEffect(() => {
-    const palette = theme === 'dark' ? darkColors : lightColors;
+    const palette = THEMES[theme] || lightColors;
     Object.assign(C, palette);
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = theme;
-      // Also set CSS vars in case anyone uses var(--paper) etc.
       const root = document.documentElement.style;
       for (const [k, v] of Object.entries(palette)) {
         root.setProperty('--' + k.replace(/[A-Z]/g, m => '-' + m.toLowerCase()), v);
@@ -93,8 +129,13 @@ export function ThemeProvider({ children }) {
     localStorage.setItem('atolye_theme', theme);
   }, [theme]);
 
-  const setTheme = (t) => setThemeState(t);
-  const toggle = () => setThemeState(t => t === 'dark' ? 'light' : 'dark');
+  const setTheme = (t) => setThemeState(THEMES[t] ? t : 'light');
+  // toggle: 3 tema arası döner light → dark → retail → light
+  const toggle = () => setThemeState(t => {
+    if (t === 'light') return 'dark';
+    if (t === 'dark') return 'retail';
+    return 'light';
+  });
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggle }}>

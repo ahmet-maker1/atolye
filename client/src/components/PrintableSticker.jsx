@@ -1,6 +1,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
+import { toPng } from 'html-to-image';
 
 // ─── Varsayılan sticker konfigürasyonu ────────────────────────
 export const DEFAULT_STICKER_CONFIG = {
@@ -15,6 +16,7 @@ export const DEFAULT_STICKER_CONFIG = {
   showCode:      true,
   showPrice:     false,               // sell_price varsa
   showDate:      false,               // alındığı tarih
+  showWarranty:  true,                // garanti bitiş tarihi varsa göster
 };
 
 // LocalStorage'dan config yükle (yoksa varsayılan döner)
@@ -58,6 +60,7 @@ export default function PrintableSticker({
     '60x40': { w: 60, h: 40, qrPx: 88,  barH: 30, padding: 2,    titlePt: 8,  bodyPt: 6,   imeiPt: 5.5, shopPt: 6 },
     '50x30': { w: 50, h: 30, qrPx: 70,  barH: 22, padding: 1.5,  titlePt: 7,  bodyPt: 5.5, imeiPt: 5,   shopPt: 5 },
     '40x25': { w: 40, h: 25, qrPx: 56,  barH: 18, padding: 1,    titlePt: 6,  bodyPt: 5,   imeiPt: 4.5, shopPt: 4.5 },
+    '40x17': { w: 40, h: 17, qrPx: 44,  barH: 12, padding: 0.8,  titlePt: 5,  bodyPt: 4,   imeiPt: 4,   shopPt: 4 },
   };
   const s = sizes[size] || sizes['60x40'];
 
@@ -79,6 +82,9 @@ export default function PrintableSticker({
   }
   if (cfg.showDate && device.purchase_date) {
     footerParts.push(new Date(device.purchase_date).toLocaleDateString('tr-TR'));
+  }
+  if (cfg.showWarranty && device.warranty_end) {
+    footerParts.push(`GAR. ${new Date(device.warranty_end).toLocaleDateString('tr-TR')}`);
   }
   const footerLine = footerParts.join(' · ');
 
@@ -225,7 +231,11 @@ export default function PrintableSticker({
               <Barcode
                 value={String(device.imei)}
                 format="CODE128"
-                width={size === '40x25' ? 1.4 : size === '50x30' ? 1.7 : 2}
+                width={
+                  size === '40x17' ? 1.1 :
+                  size === '40x25' ? 1.4 :
+                  size === '50x30' ? 1.7 : 2
+                }
                 height={s.barH}
                 displayValue={false}
                 background="#FFFFFF"
@@ -271,6 +281,7 @@ export function printStickers(size = '60x40') {
     '60x40': '60mm 40mm',
     '50x30': '50mm 30mm',
     '40x25': '40mm 25mm',
+    '40x17': '40mm 17mm',
   };
   const pageSize = dims[size] || dims['60x40'];
 
@@ -298,4 +309,37 @@ export function printStickers(size = '60x40') {
       }, 1000);
     }, 50);
   });
+}
+
+/**
+ * Sticker DOM element'ini PNG olarak indirir.
+ * Niimbot ve diğer app-tabanlı yazıcılar için.
+ *
+ * el       — .atolye-sticker class'lı div (PrintableSticker render edilmiş hali)
+ * filename — örn. "DVC-00001.png"
+ */
+export async function downloadStickerAsPng(el, filename) {
+  if (!el) throw new Error('Sticker element bulunamadı');
+  const dataUrl = await toPng(el, {
+    pixelRatio: 4,           // ~600-900 piksel — Niimbot 203 DPI için fazlasıyla yeter
+    backgroundColor: '#ffffff',
+    cacheBust: true,
+  });
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = dataUrl;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Birden fazla sticker'ı sırayla PNG olarak indirir.
+ * Tarayıcılar arka arkaya indirme yapınca uyarı verebilir — kullanıcı izin vermeli.
+ */
+export async function downloadStickersAsPng(elements, baseNames) {
+  for (let i = 0; i < elements.length; i++) {
+    await downloadStickerAsPng(elements[i], `${baseNames[i]}.png`);
+    await new Promise(r => setTimeout(r, 400));  // tarayıcı download throttling
+  }
 }

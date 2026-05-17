@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logAction } from '../lib/audit.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -31,6 +32,17 @@ router.post('/', (req, res) => {
     LEFT JOIN users u ON u.id = t.created_by
     WHERE t.id = ?
   `).get(info.lastInsertRowid);
+
+  const dev = db.prepare('SELECT code, brand, model FROM devices WHERE id = ?').get(device_id);
+  logAction({
+    req,
+    action: 'create',
+    entity: 'transaction',
+    entityId: created.id,
+    entityLabel: `${dev?.code || '?'} · ${type} · ₺${amount || 0}`,
+    changes: { type, amount: amount || 0, counterparty_name: cpName || null },
+  });
+
   res.status(201).json(created);
 });
 
@@ -68,6 +80,15 @@ router.delete('/:id', (req, res) => {
   // Undo cash_flow entry
   db.prepare('DELETE FROM cash_flow WHERE device_id = ? AND note = ? AND amount = ? AND type IN (?, ?)')
     .run(tx.device_id, tx.note, tx.amount, 'in', 'out');
+
+  logAction({
+    req,
+    action: 'delete',
+    entity: 'transaction',
+    entityId: tx.id,
+    entityLabel: `tx#${tx.id} · ${tx.type} · ₺${tx.amount}`,
+  });
+
   res.json({ deleted: true });
 });
 

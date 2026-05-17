@@ -93,11 +93,6 @@ export const api = {
   deletePhoto: (deviceId, idx) => request(`/devices/${deviceId}/photos/${idx}`, { method: 'DELETE' }),
 
   // Customers
-  customersList: (params = {}) => request('/customers?' + new URLSearchParams(params)),
-  customer:      (id) => request(`/customers/${id}`),
-  customerCreate:(data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
-  customerUpdate:(id, data) => request(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  customerDelete:(id) => request(`/customers/${id}`, { method: 'DELETE' }),
 
   // Transactions
   txCreate: (data) => request('/transactions', { method: 'POST', body: JSON.stringify(data) }),
@@ -135,6 +130,10 @@ export const api = {
     if (!token) throw new Error('Giriş gerekli');
     window.location.href = `${API}/backup?token=${encodeURIComponent(token)}`;
   },
+
+  // ─── Audit log ────────────────────────────────────────────────
+  auditList:  (params = {}) => request('/audit?' + new URLSearchParams(params)),
+  auditStats: ()            => request('/audit/stats'),
 };
 
 // Currency formatting

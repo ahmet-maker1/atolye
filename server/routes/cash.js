@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logAction } from '../lib/audit.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -63,6 +64,16 @@ router.post('/', (req, res) => {
     INSERT INTO cash_flow (type, amount, category, note, device_id, customer_id, created_by, occurred_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now')))
   `).run(type, amount, category, note, device_id, customer_id, created_by, occurred_at);
+
+  logAction({
+    req,
+    action: 'create',
+    entity: 'cash',
+    entityId: info.lastInsertRowid,
+    entityLabel: `${type === 'in' ? 'Giriş' : 'Çıkış'} · ${category || '—'} · ₺${amount}`,
+    changes: { type, amount, category, note },
+  });
+
   res.status(201).json(db.prepare('SELECT * FROM cash_flow WHERE id = ?').get(info.lastInsertRowid));
 });
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import db from '../db.js';
 import { signToken, requireAuth, requireAdmin } from '../middleware/auth.js';
+import { logAction } from '../lib/audit.js';
 
 const router = Router();
 const BCRYPT_ROUNDS = 10;
@@ -35,11 +36,28 @@ router.post('/login', async (req, res) => {
   const ok = await bcrypt.compare(password, hash);
 
   if (!user || !user.active || !ok) {
+    logAction({
+      req,
+      action: 'login_failed',
+      entity: 'auth',
+      entityLabel: email,
+      changes: { reason: !user ? 'no_user' : !user.active ? 'inactive' : 'wrong_password' },
+    });
     return res.status(401).json({ error: 'Email veya parola hatalı' });
   }
 
   db.prepare("UPDATE users SET last_seen = datetime('now') WHERE id = ?").run(user.id);
   const token = signToken(user);
+
+  // Login başarılı — audit'e yaz (req.user manuel olarak doldur, çünkü middleware bu route'tan önce geçmiyor)
+  logAction({
+    req: { ...req, user: { id: user.id, name: user.name, role: user.role } },
+    action: 'login',
+    entity: 'auth',
+    entityId: user.id,
+    entityLabel: `${user.name} (${user.email})`,
+  });
+
   res.json({ token, user: sanitize(user) });
 });
 
@@ -83,6 +101,16 @@ router.post('/', requireAdmin, async (req, res) => {
   const u = db.prepare(
     'SELECT id, code, name, email, role, active, last_seen FROM users WHERE id = ?'
   ).get(info.lastInsertRowid);
+
+  logAction({
+    req,
+    action: 'create',
+    entity: 'user',
+    entityId: u.id,
+    entityLabel: `${u.code} ${u.name} (${role})`,
+    changes: { role },
+  });
+
   res.status(201).json(u);
 });
 
@@ -143,9 +171,21 @@ router.patch('/:id', async (req, res) => {
   if (!updates.length) return res.status(400).json({ error: 'Güncellenecek alan yok' });
   params.push(targetId);
   db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-  res.json(db.prepare(
+  const updated = db.prepare(
     'SELECT id, code, name, email, role, active, last_seen FROM users WHERE id = ?'
-  ).get(targetId));
+  ).get(targetId);
+
+  const changedFields = Object.keys(req.body).filter(k => allowedFields.includes(k));
+  logAction({
+    req,
+    action: 'update',
+    entity: 'user',
+    entityId: targetId,
+    entityLabel: `${updated.code} ${updated.name}`,
+    changes: { fields: changedFields.map(f => f === 'password' ? 'password(hidden)' : f) },
+  });
+
+  res.json(updated);
 });
 
 export default router;

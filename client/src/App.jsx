@@ -8,13 +8,12 @@ import {
 import Dashboard from './views/Dashboard';
 import Devices from './views/Devices';
 import DeviceDetail from './views/DeviceDetail';
-import Customers from './views/Customers';
-import CustomerDetail from './views/CustomerDetail';
 import Service from './views/Service';
 import Cash from './views/Cash';
 import QR from './views/QR';
 import QRView from './views/QRView';
 import Users from './views/Users';
+import AuditLog from './views/AuditLog';
 import Login from './views/Login';
 import Settings from './views/Settings';
 import { C, useTheme } from './components/ui';
@@ -23,11 +22,11 @@ import { auth } from './lib/api';
 const NAV = [
   { to: '/',          label: 'Anasayfa',       icon: LayoutDashboard, num: '01', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
   { to: '/devices',   label: 'Cihazlar',       icon: Package,         num: '02', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
-  { to: '/customers', label: 'Cari Kartlar',   icon: UsersIcon,       num: '03', roles: ['Admin', 'Kasiyer'] },
-  { to: '/service',   label: 'Servis',         icon: Wrench,          num: '04', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
-  { to: '/cash',      label: 'Kasa',           icon: Wallet,          num: '05', roles: ['Admin', 'Kasiyer'] },
-  { to: '/qr',        label: 'QR & Sticker',   icon: QrCode,          num: '06', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
-  { to: '/users',     label: 'Personel',       icon: ShieldCheck,     num: '07', roles: ['Admin'] },
+  { to: '/service',   label: 'Servis',         icon: Wrench,          num: '03', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
+  { to: '/cash',      label: 'Kasa',           icon: Wallet,          num: '04', roles: ['Admin', 'Kasiyer'] },
+  { to: '/qr',        label: 'QR & Sticker',   icon: QrCode,          num: '05', roles: ['Admin', 'Kasiyer', 'Teknisyen'] },
+  { to: '/users',     label: 'Personel',       icon: ShieldCheck,     num: '06', roles: ['Admin'] },
+  { to: '/audit',     label: 'Sistem Logu',    icon: Database,        num: '07', roles: ['Admin'] },
   { to: '/settings',  label: 'Ayarlar',        icon: SettingsIcon,    num: '08', roles: ['Admin'] },
 ];
 
@@ -190,12 +189,11 @@ function ShellLayout({ user }) {
             <Route path="/" element={<Dashboard />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/devices/:id" element={<DeviceDetail />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/service" element={<Service />} />
             <Route path="/cash" element={<Cash />} />
             <Route path="/qr" element={<QR />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/audit" element={<AuditLog />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

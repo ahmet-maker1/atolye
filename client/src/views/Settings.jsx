@@ -76,10 +76,10 @@ export default function Settings() {
         <Card>
           <SectionLabel num="02" label="Görünüm" />
           <p className="text-sm mb-4" style={{ color: C.inkSoft }}>
-            Açık veya koyu tema seç. Tercih cihazına kaydedilir.
+            Tema seç — tercih cihazına kaydedilir.
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <button onClick={() => setTheme('light')}
               className="p-4 text-left transition-colors"
               style={{
@@ -88,8 +88,8 @@ export default function Settings() {
                 border: `1px solid ${theme === 'light' ? C.ink : C.line}`,
               }}>
               <Sun size={20} className="mb-2" />
-              <div className="text-sm font-serif" style={{ fontWeight: 500 }}>Açık tema</div>
-              <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-1 opacity-60">krem · charcoal</div>
+              <div className="text-sm font-serif" style={{ fontWeight: 500 }}>Editör (krem)</div>
+              <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-1 opacity-60">krem · vermilion</div>
               {theme === 'light' && <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-2" style={{ color: C.accent }}>● aktif</div>}
             </button>
 
@@ -101,9 +101,25 @@ export default function Settings() {
                 border: `1px solid ${theme === 'dark' ? C.ink : C.line}`,
               }}>
               <Moon size={20} className="mb-2" />
-              <div className="text-sm font-serif" style={{ fontWeight: 500 }}>Koyu tema</div>
+              <div className="text-sm font-serif" style={{ fontWeight: 500 }}>Gece</div>
               <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-1 opacity-60">deep · cream</div>
               {theme === 'dark' && <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-2" style={{ color: C.accent }}>● aktif</div>}
+            </button>
+
+            <button onClick={() => setTheme('retail')}
+              className="p-4 text-left transition-colors"
+              style={{
+                background: theme === 'retail' ? '#0171CE' : C.paperDeep,
+                color: theme === 'retail' ? '#fff' : C.ink,
+                border: `1px solid ${theme === 'retail' ? '#0171CE' : C.line}`,
+              }}>
+              <div className="flex gap-1 mb-2">
+                <div style={{ width: 12, height: 12, background: '#0171CE', border: '1px solid #fff' }}></div>
+                <div style={{ width: 12, height: 12, background: '#FCB61A', border: '1px solid #fff' }}></div>
+              </div>
+              <div className="text-sm font-serif" style={{ fontWeight: 500 }}>Perakende</div>
+              <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-1 opacity-60">mavi · sarı</div>
+              {theme === 'retail' && <div className="text-[10px] uppercase tracking-[0.15em] font-mono mt-2" style={{ color: '#FCB61A' }}>● aktif</div>}
             </button>
           </div>
         </Card>

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logAction } from '../lib/audit.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -65,21 +66,48 @@ router.post('/', (req, res) => {
     db.prepare("UPDATE devices SET status = 'serviste' WHERE id = ?").run(device_id);
   }
 
-  res.status(201).json(db.prepare('SELECT * FROM service_tickets WHERE id = ?').get(info.lastInsertRowid));
+  const created = db.prepare('SELECT * FROM service_tickets WHERE id = ?').get(info.lastInsertRowid);
+  logAction({
+    req,
+    action: 'create',
+    entity: 'service',
+    entityId: created.id,
+    entityLabel: `${code} — ${external_customer || 'dahili'}`,
+    changes: { issue, parts_cost: parts_cost || 0, labor_cost: labor_cost || 0 },
+  });
+
+  res.status(201).json(created);
 });
 
 // PATCH /api/services/:id
 router.patch('/:id', (req, res) => {
   const fields = ['issue','parts_cost','labor_cost','technician_id','status','note','completed_at'];
+  const before = db.prepare('SELECT code, status FROM service_tickets WHERE id = ?').get(req.params.id);
+  if (!before) return res.status(404).json({ error: 'Servis kaydı bulunamadı' });
+
   const updates = [], params = [];
+  const changedKeys = [];
   for (const f of fields) {
-    if (req.body[f] !== undefined) { updates.push(`${f} = ?`); params.push(req.body[f]); }
+    if (req.body[f] !== undefined) {
+      updates.push(`${f} = ?`); params.push(req.body[f]); changedKeys.push(f);
+    }
   }
   if (!updates.length) return res.status(400).json({ error: 'Güncellenecek alan yok' });
   updates.push("updated_at = datetime('now')");
   params.push(req.params.id);
   db.prepare(`UPDATE service_tickets SET ${updates.join(', ')} WHERE id = ?`).run(...params);
-  res.json(db.prepare('SELECT * FROM service_tickets WHERE id = ?').get(req.params.id));
+  const updated = db.prepare('SELECT * FROM service_tickets WHERE id = ?').get(req.params.id);
+
+  logAction({
+    req,
+    action: 'update',
+    entity: 'service',
+    entityId: updated.id,
+    entityLabel: `${before.code}`,
+    changes: { fields: changedKeys, status: req.body.status || before.status },
+  });
+
+  res.json(updated);
 });
 
 export default router;

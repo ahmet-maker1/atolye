@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Camera } from 'lucide-react';
 import { api } from '../lib/api';
 import { C } from './ui';
@@ -31,16 +31,11 @@ export default function DeviceForm({ onClose, onSaved }) {
   const [form, setForm] = useState({
     imei: '', brand: '', model: '', color: '', storage: '', ram: '',
     battery: 100, screen: '', condition: 'A temiz', shelf: '',
-    buy_price: 0, supplier_id: '', note: ''
+    buy_price: 0, supplier_name: '', note: '', warranty_end: ''
   });
-  const [suppliers, setSuppliers] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
   const [scanning, setScanning] = useState(false);
-
-  useEffect(() => {
-    api.customersList({ role: 'tedarikçi' }).then(setSuppliers).catch(() => {});
-  }, []);
 
   const up = (k, v) => setForm({ ...form, [k]: v });
 
@@ -52,7 +47,8 @@ export default function DeviceForm({ onClose, onSaved }) {
         ...form,
         battery: Number(form.battery),
         buy_price: Number(form.buy_price),
-        supplier_id: form.supplier_id || null,
+        supplier_name: form.supplier_name?.trim() || null,
+        warranty_end: form.warranty_end || null,
       });
       onSaved();
     } catch (e) {
@@ -139,6 +135,7 @@ export default function DeviceForm({ onClose, onSaved }) {
               </select>
             </div>
             <Input form={form} up={up} label="Raf" k="shelf" placeholder="V-01 / R-05" />
+            <Input form={form} up={up} label="Garanti bitiş tarihi" k="warranty_end" type="date" />
           </div>
 
           <div className="pt-3 border-t" style={{ borderColor: C.line }}>
@@ -147,17 +144,7 @@ export default function DeviceForm({ onClose, onSaved }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <Input form={form} up={up} label="Alış Fiyatı (₺)" k="buy_price" type="number" min="0" step="100" />
-              <div>
-                <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                  Tedarikçi
-                </label>
-                <select value={form.supplier_id} onChange={e => up('supplier_id', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border outline-none"
-                  style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}>
-                  <option value="">— seçin —</option>
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.code})</option>)}
-                </select>
-              </div>
+              <Input form={form} up={up} label="Tedarikçi / Aldığım Kişi" k="supplier_name" placeholder="Ad soyad veya dükkan" />
             </div>
           </div>
 

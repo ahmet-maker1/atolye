@@ -58,8 +58,11 @@ CREATE TABLE IF NOT EXISTS devices (
   sell_price    REAL DEFAULT 0,
   supplier_id   INTEGER REFERENCES customers(id),
   customer_id   INTEGER REFERENCES customers(id),
+  supplier_name TEXT,                                -- manuel girilen tedarikçi adı (yeni)
+  customer_name TEXT,                                -- manuel girilen müşteri adı (yeni)
   purchase_date TEXT DEFAULT (date('now')),
   sale_date     TEXT,
+  warranty_end  TEXT,                                -- gg/aa/yyyy formatında ISO date saklanır
   note          TEXT,
   image_urls    TEXT DEFAULT '[]',               -- JSON array of paths
   qr_token      TEXT UNIQUE NOT NULL,
@@ -157,11 +160,12 @@ AFTER INSERT ON transactions
 WHEN NEW.type = 'sale'
 BEGIN
   UPDATE devices
-    SET sell_price  = NEW.amount,
-        customer_id = NEW.counterparty_id,
-        sale_date   = date(NEW.performed_at),
-        status      = 'satıldı',
-        updated_at  = datetime('now')
+    SET sell_price    = NEW.amount,
+        customer_id   = NEW.counterparty_id,
+        customer_name = COALESCE(NEW.counterparty_name, customer_name),
+        sale_date     = date(NEW.performed_at),
+        status        = 'satıldı',
+        updated_at    = datetime('now')
   WHERE id = NEW.device_id;
 END;
 
@@ -171,9 +175,10 @@ AFTER INSERT ON transactions
 WHEN NEW.type = 'purchase'
 BEGIN
   UPDATE devices
-    SET buy_price   = NEW.amount,
-        supplier_id = NEW.counterparty_id,
-        updated_at  = datetime('now')
+    SET buy_price     = NEW.amount,
+        supplier_id   = NEW.counterparty_id,
+        supplier_name = COALESCE(NEW.counterparty_name, supplier_name),
+        updated_at    = datetime('now')
   WHERE id = NEW.device_id;
 END;
 
@@ -210,3 +215,23 @@ BEGIN
     CASE NEW.type WHEN 'expense' THEN 'Masraf' WHEN 'service' THEN 'Servis parça' ELSE 'İşçilik' END,
     NEW.note, NEW.device_id, NEW.created_by, NEW.performed_at);
 END;
+
+-- ─────────────────────────────────────────────────────────────────
+-- Audit log — kim ne zaman ne yaptı (Admin tarafından görüntülenir)
+-- ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_log (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at    TEXT DEFAULT (datetime('now')),
+  user_id       INTEGER REFERENCES users(id),
+  user_name     TEXT,
+  user_role     TEXT,
+  action        TEXT NOT NULL,    -- create | update | delete | restore | login | login_failed
+  entity        TEXT NOT NULL,    -- device | transaction | service | cash | user | auth
+  entity_id     INTEGER,
+  entity_label  TEXT,             -- okunabilir referans (DVC-00001 gibi)
+  changes       TEXT,             -- JSON: değişen alanlar veya context
+  ip            TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_date   ON audit_log(created_at DESC);

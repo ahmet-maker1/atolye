@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Hash, HardDrive, Cpu, Monitor, Battery, MapPin, Palette, Tag, Calendar, ExternalLink } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Hash, HardDrive, Cpu, Monitor, Battery, MapPin, Palette, Tag, Calendar } from 'lucide-react';
 import { api, tl } from '../lib/api';
 import { C, StatusPill, phoneColor } from '../components/ui';
 
@@ -155,11 +155,6 @@ export default function QRView() {
             <div className="text-sm" style={{ color: C.inkSoft }}>{device.note}</div>
           </div>
         )}
-
-        <Link to="/" className="block w-full text-center py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
-          style={{ background: C.ink, color: C.paper }}>
-          <ExternalLink size={12} /> SİSTEME GİT
-        </Link>
 
         <div className="text-center pt-4 pb-8 text-[9px] tracking-[0.2em] uppercase font-mono" style={{ color: C.muted }}>
           atölye.co · cihaz envanter sistemi

@@ -199,18 +199,16 @@ function ActionButton({ t, updateStatus, fullWidth }) {
 function ServiceForm({ onClose, onSaved }) {
   const [mode, setMode] = useState('external');
   const [form, setForm] = useState({
-    device_id: '', external_device_info: '', external_customer: '', customer_id: '',
+    device_id: '', external_device_info: '', external_customer: '',
     issue: '', parts_cost: 0, labor_cost: 0, technician_id: '', note: ''
   });
   const [devices, setDevices] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
 
   useEffect(() => {
     api.devicesList().then(setDevices).catch(() => {});
-    api.customersList().then(setCustomers).catch(() => {});
     api.usersList().then(users => setTechnicians(users.filter(u => u.role === 'Teknisyen' && u.active))).catch(() => {});
   }, []);
 
@@ -226,7 +224,6 @@ function ServiceForm({ onClose, onSaved }) {
         parts_cost: Number(form.parts_cost),
         labor_cost: Number(form.labor_cost),
         device_id: mode === 'internal' ? form.device_id : null,
-        customer_id: mode === 'external' ? form.customer_id || null : null,
         external_device_info: mode === 'external' ? form.external_device_info : null,
         external_customer: mode === 'external' ? form.external_customer : null,
         technician_id: form.technician_id || null,
@@ -278,6 +275,7 @@ function ServiceForm({ onClose, onSaved }) {
             </div>
           ) : (
             <>
+            <>
               <div>
                 <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
                   Cihaz bilgisi *
@@ -286,24 +284,13 @@ function ServiceForm({ onClose, onSaved }) {
                   placeholder="Samsung S23 · 256GB · IMEI 123..."
                   className="w-full px-3 py-2 text-sm border outline-none font-mono" style={inputStyle} />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                    Müşteri adı
-                  </label>
-                  <input value={form.external_customer} onChange={e => up('external_customer', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border outline-none" style={inputStyle} />
-                </div>
-                <div>
-                  <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                    Kayıtlı cari
-                  </label>
-                  <select value={form.customer_id} onChange={e => up('customer_id', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border outline-none" style={inputStyle}>
-                    <option value="">— yok —</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
+                  Müşteri adı
+                </label>
+                <input value={form.external_customer} onChange={e => up('external_customer', e.target.value)}
+                  placeholder="Ad soyad"
+                  className="w-full px-3 py-2 text-sm border outline-none" style={inputStyle} />
               </div>
             </>
           )}

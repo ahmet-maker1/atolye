@@ -36,6 +36,23 @@
   --modal-overlay: rgba(0,0,0,0.7);
 }
 
+[data-theme="retail"] {
+  --paper: #FFFFFF;
+  --paper-deep: #F2F5F8;
+  --paper-lite: #FFFFFF;
+  --ink: #1A2330;
+  --ink-soft: #3D4856;
+  --muted: #7C8896;
+  --line: #D9DEE5;
+  --accent: #0171CE;
+  --ok: #2E8B57;
+  --warn: #FCB61A;
+  --bad: #D63B2F;
+  --scrollbar-thumb: #D9DEE5;
+  --scrollbar-thumb-hover: #7C8896;
+  --modal-overlay: rgba(26,35,48,0.55);
+}
+
 * { -webkit-font-smoothing: antialiased; }
 
 html, body {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, ShoppingCart, FilePlus, Wrench } from 'lucide-react';
 import { api, tl, auth } from '../lib/api';
 import { C } from './ui';
@@ -11,8 +11,8 @@ const CONFIG = {
     accent: C.accent,
     confirmLabel: 'SATIŞI TAMAMLA',
     amountLabel: 'Satış fiyatı (₺)',
-    cpLabel: 'Müşteri',
-    cpRole: 'müşteri',
+    cpLabel: 'Müşteri / Sattığım Kişi',
+    cpPlaceholder: 'Ad soyad (opsiyonel)',
     noteDefault: 'Nakit satış',
     type: 'sale',
   },
@@ -44,24 +44,10 @@ export default function ActionModal({ device, type, onClose, onDone }) {
   const cfg = CONFIG[type];
   const Icon = cfg.icon;
   const [amount, setAmount] = useState('');
-  const [counterpartyId, setCounterpartyId] = useState('');
+  const [counterpartyName, setCounterpartyName] = useState('');
   const [note, setNote] = useState(cfg.noteDefault);
-  const [people, setPeople] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
-
-  useEffect(() => {
-    if (cfg.cpRole) {
-      api.customersList({ role: cfg.cpRole })
-        .then(list => {
-          // "her ikisi" rolündekileri de ekle
-          api.customersList({ role: 'her ikisi' }).then(extra => {
-            setPeople([...list, ...extra]);
-          }).catch(() => setPeople(list));
-        })
-        .catch(() => {});
-    }
-  }, [type]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -72,7 +58,7 @@ export default function ActionModal({ device, type, onClose, onDone }) {
         device_id: device.id,
         type: cfg.type,
         amount: Number(amount),
-        counterparty_id: counterpartyId || null,
+        counterparty_name: counterpartyName?.trim() || null,
         note: note || null,
         created_by: user?.id || null,
       });
@@ -137,17 +123,10 @@ export default function ActionModal({ device, type, onClose, onDone }) {
                 style={{ color: C.muted }}>
                 {cfg.cpLabel}
               </label>
-              <select value={counterpartyId} onChange={e => setCounterpartyId(e.target.value)}
+              <input type="text" value={counterpartyName} onChange={e => setCounterpartyName(e.target.value)}
                 className="w-full px-3 py-2 text-sm border outline-none"
-                style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}>
-                <option value="">— seçin —</option>
-                {people.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.code})</option>
-                ))}
-              </select>
-              <div className="text-[10px] mt-1" style={{ color: C.muted }}>
-                Kayıtlı değilse önce Cari kartlar sayfasından ekleyin.
-              </div>
+                style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}
+                placeholder={cfg.cpPlaceholder} />
             </div>
           )}
 

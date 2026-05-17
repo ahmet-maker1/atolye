@@ -24,6 +24,9 @@ export function initSchema() {
   // SQLite doesn't support "ADD COLUMN IF NOT EXISTS" — try-catch is the standard
   const migrations = [
     "ALTER TABLE devices ADD COLUMN deleted_at TEXT",
+    "ALTER TABLE devices ADD COLUMN warranty_end TEXT",
+    "ALTER TABLE devices ADD COLUMN supplier_name TEXT",
+    "ALTER TABLE devices ADD COLUMN customer_name TEXT",
   ];
   for (const sql of migrations) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }

@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Printer, Check, Settings as SettingsIcon, RotateCcw } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Printer, Check, Settings as SettingsIcon, RotateCcw, Download } from 'lucide-react';
 import { api } from '../lib/api';
 import { C, Card, SectionLabel, PhoneThumb, StatusPill } from '../components/ui';
 import PrintableSticker, {
   printStickers,
+  downloadStickerAsPng,
+  downloadStickersAsPng,
   DEFAULT_STICKER_CONFIG,
   loadStickerConfig,
   saveStickerConfig,
@@ -11,9 +13,10 @@ import PrintableSticker, {
 import { useToast } from '../components/Toast';
 
 const SIZES = [
-  { id: '60x40', label: '60×40 mm', desc: 'standart termal etiket' },
+  { id: '60x40', label: '60×40 mm', desc: 'standart termal' },
   { id: '50x30', label: '50×30 mm', desc: 'orta boy' },
-  { id: '40x25', label: '40×25 mm', desc: 'minimal' },
+  { id: '40x25', label: '40×25 mm', desc: 'kompakt' },
+  { id: '40x17', label: '40×17 mm', desc: 'dar / 2-up yazıcı' },
 ];
 
 // Düzenlenebilir alanlar (toggle'larla)
@@ -27,6 +30,7 @@ const FIELDS = [
   { k: 'showShelf',      label: 'Raf bilgisi' },
   { k: 'showPrice',      label: 'Satış fiyatı (varsa)' },
   { k: 'showDate',       label: 'Alındığı tarih' },
+  { k: 'showWarranty',   label: 'Garanti bitiş tarihi (varsa)' },
 ];
 
 export default function QR() {
@@ -87,6 +91,40 @@ export default function QR() {
   const printOne = () => {
     if (!selected) return;
     printStickers(size);
+  };
+
+  const downloadOnePng = async () => {
+    if (!selected) return;
+    const el = document.querySelector('.print-area .atolye-sticker');
+    if (!el) {
+      push({ kind: 'error', message: 'Sticker render edilmedi, sayfayı yenile.' });
+      return;
+    }
+    try {
+      await downloadStickerAsPng(el, `${selected.code}-${selected.imei.slice(-4)}.png`);
+      push({ kind: 'success', message: 'PNG indirildi — Niimbot app\'a yükleyebilirsin.' });
+    } catch (e) {
+      push({ kind: 'error', message: 'İndirme hatası: ' + e.message });
+    }
+  };
+
+  const downloadBulkPng = async () => {
+    if (bulkDevices.length === 0) {
+      push({ kind: 'warn', message: 'Önce cihazları seç.' });
+      return;
+    }
+    const els = [...document.querySelectorAll('.print-area .atolye-sticker')];
+    if (els.length !== bulkDevices.length) {
+      push({ kind: 'error', message: 'Sticker sayısı eşleşmiyor — sayfayı yenile.' });
+      return;
+    }
+    const names = bulkDevices.map(d => `${d.code}-${d.imei.slice(-4)}`);
+    push({ kind: 'success', message: `${els.length} PNG indiriliyor...` });
+    try {
+      await downloadStickersAsPng(els, names);
+    } catch (e) {
+      push({ kind: 'error', message: 'İndirme hatası: ' + e.message });
+    }
   };
 
   const printBulk = () => {
@@ -223,7 +261,7 @@ export default function QR() {
       {/* Boyut seçimi */}
       <Card>
         <SectionLabel num="00" label="Etiket boyutu" />
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {SIZES.map(opt => (
             <button key={opt.id} onClick={() => setSize(opt.id)}
               className="p-3 text-left transition-colors"
@@ -322,22 +360,36 @@ export default function QR() {
                       </div>
                     ))}
                   </div>
-                  <button onClick={printBulk}
-                    className="w-full py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
-                    style={{ background: C.accent, color: '#fff' }}>
-                    <Printer size={13} /> {bulkDevices.length} ETİKETİ YAZDIR
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={downloadBulkPng}
+                      className="flex-1 py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
+                      style={{ background: C.paperDeep, color: C.ink, border: `1px solid ${C.line}` }}>
+                      <Download size={13} /> PNG İNDİR
+                    </button>
+                    <button onClick={printBulk}
+                      className="flex-1 py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
+                      style={{ background: C.accent, color: '#fff' }}>
+                      <Printer size={13} /> YAZDIR
+                    </button>
+                  </div>
                 </>
               )}
             </Card>
           ) : selected ? (
             <Card>
               <SectionLabel num="01" label="Sticker önizleme" right={
-                <button onClick={printOne}
-                  className="px-3 py-1.5 text-[10px] font-mono inline-flex items-center gap-1.5"
-                  style={{ background: C.ink, color: C.paper }}>
-                  <Printer size={12} /> YAZDIR ({size})
-                </button>
+                <div className="flex gap-1.5">
+                  <button onClick={downloadOnePng}
+                    className="px-3 py-1.5 text-[10px] font-mono inline-flex items-center gap-1.5"
+                    style={{ background: C.paperDeep, color: C.ink, border: `1px solid ${C.line}` }}>
+                    <Download size={12} /> PNG
+                  </button>
+                  <button onClick={printOne}
+                    className="px-3 py-1.5 text-[10px] font-mono inline-flex items-center gap-1.5"
+                    style={{ background: C.ink, color: C.paper }}>
+                    <Printer size={12} /> YAZDIR ({size})
+                  </button>
+                </div>
               } />
 
               {/* Gerçek boyutlu canlı önizleme */}

@@ -4,13 +4,15 @@ import {
   ArrowLeft, ArrowUpRight, ArrowDownRight, Hash, HardDrive, Cpu, Monitor,
   Battery, MapPin, Palette, Tag, Calendar, Plus, Equal, TrendingUp,
   ShoppingCart, FilePlus, Wrench, Edit3, Printer, Camera, Receipt, Trash2,
-  FileText
+  FileText, Download
 } from 'lucide-react';
 import { api, tl, auth } from '../lib/api';
 import { C, Card, SectionLabel, StatusPill, FakeQR, FakeBarcode, phoneColor } from '../components/ui';
 import ActionModal from '../components/ActionModal';
+import DeviceEditModal from '../components/DeviceEditModal';
+import DeviceNoteModal from '../components/DeviceNoteModal';
 import PhotoUpload from '../components/PhotoUpload';
-import PrintableSticker, { printStickers, loadStickerConfig } from '../components/PrintableSticker';
+import PrintableSticker, { printStickers, downloadStickerAsPng, loadStickerConfig } from '../components/PrintableSticker';
 import { useToast } from '../components/Toast';
 
 const eventMeta = {
@@ -32,6 +34,8 @@ export default function DeviceDetail() {
   const user = auth.getUser();
   const isAdmin = user?.role === 'Admin';
   const [action, setAction] = useState(null);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showNote, setShowNote] = useState(false);
 
   const load = () => api.device(id).then(setDevice).catch(e => setErr(e.message));
   useEffect(() => { load(); }, [id]);
@@ -158,11 +162,27 @@ export default function DeviceDetail() {
             </Card>
           </div>
 
-          <button onClick={() => printStickers('60x40')}
-            className="w-full py-2.5 text-xs inline-flex items-center justify-center gap-2 border font-mono"
-            style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
-            <Printer size={13} /> ETİKETİ YAZDIR (60×40mm)
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => printStickers('60x40')}
+              className="py-2.5 text-xs inline-flex items-center justify-center gap-2 border font-mono"
+              style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
+              <Printer size={13} /> YAZDIR
+            </button>
+            <button onClick={async () => {
+              const el = document.querySelector('.print-area .atolye-sticker');
+              if (!el) return push({ kind: 'error', message: 'Sticker hazır değil.' });
+              try {
+                await downloadStickerAsPng(el, `${device.code}-${device.imei.slice(-4)}.png`);
+                push({ kind: 'success', message: 'PNG indirildi.' });
+              } catch (e) {
+                push({ kind: 'error', message: e.message });
+              }
+            }}
+              className="py-2.5 text-xs inline-flex items-center justify-center gap-2 border font-mono"
+              style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
+              <Download size={13} /> PNG İNDİR
+            </button>
+          </div>
         </div>
 
         {/* Info column */}
@@ -196,6 +216,7 @@ export default function DeviceDetail() {
                 ['Renk', device.color || '—', Palette],
                 ['Durum', device.condition || '—', Tag],
                 ['Alındı', device.purchase_date, Calendar],
+                ['Garanti', device.warranty_end ? new Date(device.warranty_end).toLocaleDateString('tr-TR') : '—', Calendar],
               ].map(([k, v, Icon]) => (
                 <div key={k}>
                   <div className="flex items-center gap-1.5 text-[9px] tracking-[0.18em] uppercase font-mono mb-1"
@@ -208,40 +229,32 @@ export default function DeviceDetail() {
             </div>
           </Card>
 
-          {/* Tedarikçi / Müşteri kartı */}
-          {(device.supplier_id || device.customer_id) && (
+          {/* Tedarikçi / Müşteri kartı — sadece görüntüleme */}
+          {(device.supplier_name || device.customer_name) && (
             <Card>
-              <SectionLabel num="C" label="Carileri" />
+              <SectionLabel num="K" label="Kişiler" />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {device.supplier_id && (
-                  <button onClick={() => navigate(`/customers/${device.supplier_id}`)}
-                    className="text-left p-3 transition-colors hover:bg-black/5"
+                {device.supplier_name && (
+                  <div className="p-3"
                     style={{ background: C.paperDeep, border: `1px solid ${C.line}` }}>
                     <div className="text-[10px] uppercase tracking-[0.18em] font-mono mb-1" style={{ color: C.ok }}>
-                      ↓ Tedarikçi (alındığı yer)
+                      ↓ Aldığı kişi / tedarikçi
                     </div>
-                    <div className="text-base font-serif truncate" style={{ color: C.ink, fontWeight: 500 }}>
+                    <div className="text-base font-serif" style={{ color: C.ink, fontWeight: 500 }}>
                       {device.supplier_name}
                     </div>
-                    <div className="text-[10px] mt-1 font-mono" style={{ color: C.muted }}>
-                      {device.supplier_code} · ayrıntıya git →
-                    </div>
-                  </button>
+                  </div>
                 )}
-                {device.customer_id && (
-                  <button onClick={() => navigate(`/customers/${device.customer_id}`)}
-                    className="text-left p-3 transition-colors hover:bg-black/5"
+                {device.customer_name && (
+                  <div className="p-3"
                     style={{ background: C.paperDeep, border: `1px solid ${C.line}` }}>
                     <div className="text-[10px] uppercase tracking-[0.18em] font-mono mb-1" style={{ color: C.accent }}>
-                      ↑ Müşteri (satıldığı yer)
+                      ↑ Sattığı kişi / müşteri
                     </div>
-                    <div className="text-base font-serif truncate" style={{ color: C.ink, fontWeight: 500 }}>
+                    <div className="text-base font-serif" style={{ color: C.ink, fontWeight: 500 }}>
                       {device.customer_name}
                     </div>
-                    <div className="text-[10px] mt-1 font-mono" style={{ color: C.muted }}>
-                      {device.customer_code} · ayrıntıya git →
-                    </div>
-                  </button>
+                  </div>
                 )}
               </div>
             </Card>
@@ -289,8 +302,8 @@ export default function DeviceDetail() {
         </div>
       </div>
 
-      {/* Actions — responsive: 2 cols on mobile, more on desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+      {/* Actions — responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         <button onClick={() => setAction('sale')} disabled={device.status === 'satıldı'}
           className="py-3 text-xs inline-flex items-center justify-center gap-2 disabled:opacity-40 font-mono"
           style={{ background: C.accent, color: '#fff' }}>
@@ -305,6 +318,16 @@ export default function DeviceDetail() {
           className="py-3 text-xs inline-flex items-center justify-center gap-2 border font-mono"
           style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
           <Wrench size={14} /> SERVİS
+        </button>
+        <button onClick={() => setShowNote(true)}
+          className="py-3 text-xs inline-flex items-center justify-center gap-2 border font-mono"
+          style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
+          <FileText size={14} /> NOT EKLE
+        </button>
+        <button onClick={() => setShowEdit(true)}
+          className="py-3 text-xs inline-flex items-center justify-center gap-2 border font-mono"
+          style={{ borderColor: C.ink, color: C.ink, background: C.paperLite }}>
+          <Edit3 size={14} /> DÜZENLE
         </button>
         <button onClick={() => window.open(qrUrl, '_blank')}
           className="py-3 text-xs inline-flex items-center justify-center gap-2 border font-mono"
@@ -348,6 +371,22 @@ export default function DeviceDetail() {
           type={action}
           onClose={() => setAction(null)}
           onDone={() => { setAction(null); load(); }}
+        />
+      )}
+
+      {showEdit && (
+        <DeviceEditModal
+          device={device}
+          onClose={() => setShowEdit(false)}
+          onSaved={() => { setShowEdit(false); load(); push({ kind: 'success', message: 'Cihaz güncellendi.' }); }}
+        />
+      )}
+
+      {showNote && (
+        <DeviceNoteModal
+          device={device}
+          onClose={() => setShowNote(false)}
+          onSaved={() => { setShowNote(false); load(); push({ kind: 'success', message: 'Not eklendi.' }); }}
         />
       )}
 

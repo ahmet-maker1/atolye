@@ -11,13 +11,14 @@ import 'dotenv/config';
 import './db.js';
 
 import devicesRouter from './routes/devices.js';
-import customersRouter from './routes/customers.js';
+// import customersRouter from './routes/customers.js';  // Cari sistemi kaldırıldı (manuel isim kullanılıyor)
 import transactionsRouter from './routes/transactions.js';
 import servicesRouter from './routes/services.js';
 import cashRouter from './routes/cash.js';
 import usersRouter from './routes/users.js';
 import dashboardRouter from './routes/dashboard.js';
 import backupRouter from './routes/backup.js';
+import auditRouter from './routes/audit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -97,13 +98,14 @@ app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 
 // ─── API routes ──────────────────────────────────────────────────
 app.use('/api/devices',      devicesRouter);
-app.use('/api/customers',    customersRouter);
+// app.use('/api/customers',    customersRouter);  // Cari kaldırıldı
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/services',     servicesRouter);
 app.use('/api/cash',         cashRouter);
 app.use('/api/users',        usersRouter);
 app.use('/api/dashboard',    dashboardRouter);
 app.use('/api/backup',       backupRouter);
+app.use('/api/audit',        auditRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'atolye-api', env: NODE_ENV, time: new Date().toISOString() });
