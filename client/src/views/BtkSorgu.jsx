@@ -141,7 +141,7 @@ export default function BtkSorgu() {
               className="py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
               style={{ background: C.accent, color: '#fff' }}>
               <ExternalLink size={13} />
-              {popupOpen ? 'PENCEREYİ ÖNE AL' : 'E-DEVLET\'TE AÇ'}
+              {popupOpen ? 'PENCEREYİ ÖNE AL' : `E-DEVLET'TE AÇ`}
             </button>
           </div>
         </div>
@@ -152,8 +152,8 @@ export default function BtkSorgu() {
         <SectionLabel num="02" label="Nasıl çalışır" />
         <div className="space-y-2 text-sm" style={{ color: C.inkSoft }}>
           <Step n="1" text="IMEI alanına numarayı yaz veya kameradan tara." />
-          <Step n="2" text='"KOPYALA" tıkla — IMEI clipboard\'a alınır.' />
-          <Step n="3" text='"E-DEVLET\'TE AÇ" tıkla — küçük pencere açılır.' />
+          <Step n="2" text={`"KOPYALA" tıkla — IMEI clipboard'a alınır.`} />
+          <Step n="3" text={`"E-DEVLET'TE AÇ" tıkla — küçük pencere açılır.`} />
           <Step n="4" text="Açılan sayfada e-Devlet şifrenle giriş yap." />
           <Step n="5" text="IMEI alanına yapıştır, sorgula." />
           <Step n="6" text="Pencereyi kapat → sistemde kal." />
