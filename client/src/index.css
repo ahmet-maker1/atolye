@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, [data-theme="light"] {
+  --paper: #F3EEE3;
+  --paper-deep: #EAE3D3;
+  --paper-lite: #FBF8F0;
+  --ink: #1A1816;
+  --ink-soft: #3D3833;
+  --muted: #8A7F70;
+  --line: #D9D0BD;
+  --accent: #C8421C;
+  --ok: #3B7A3E;
+  --warn: #B5791F;
+  --bad: #A62F22;
+  --scrollbar-thumb: #D9D0BD;
+  --scrollbar-thumb-hover: #8A7F70;
+  --modal-overlay: rgba(26,24,22,0.5);
+}
+
+[data-theme="dark"] {
+  --paper: #16140F;
+  --paper-deep: #0E0C09;
+  --paper-lite: #1F1B16;
+  --ink: #F0EAD8;
+  --ink-soft: #C9C0AB;
+  --muted: #7A7163;
+  --line: #403A30;
+  --accent: #E6622E;
+  --ok: #7DB876;
+  --warn: #D9A455;
+  --bad: #D9665A;
+  --scrollbar-thumb: #403A30;
+  --scrollbar-thumb-hover: #7A7163;
+  --modal-overlay: rgba(0,0,0,0.7);
+}
+
+[data-theme="retail"] {
+  --paper: #FFFFFF;
+  --paper-deep: #F2F5F8;
+  --paper-lite: #FFFFFF;
+  --ink: #1A2330;
+  --ink-soft: #3D4856;
+  --muted: #7C8896;
+  --line: #D9DEE5;
+  --accent: #0171CE;
+  --ok: #2E8B57;
+  --warn: #FCB61A;
+  --bad: #D63B2F;
+  --scrollbar-thumb: #D9DEE5;
+  --scrollbar-thumb-hover: #7C8896;
+  --modal-overlay: rgba(26,35,48,0.55);
+}
+
+* { -webkit-font-smoothing: antialiased; }
+
+html, body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Manrope, system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#root { min-height: 100vh; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+input, button, textarea, select { font-family: inherit; }
+button { cursor: pointer; }
+
+/* Form inputs in dark mode shouldn't be glaring white */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: #0E0C09 !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--muted);
+}
+
+[data-theme="dark"] select option {
+  background-color: #0E0C09;
+  color: var(--ink);
+}
+
+/* Bot mobile drawer animation */
+.drawer-overlay {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Print area — hidden in normal view, only visible in print */
+.print-area {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  pointer-events: none;
+}
+
+@media print {
+  /* Default print: hide everything */
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  body * { visibility: hidden !important; }
+
+  /* Reveal only the print area + sticker contents */
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Each sticker on its own page */
+  .atolye-sticker {
+    page-break-after: always;
+    break-after: page;
+    margin: 0 !important;
+  }
+  .atolye-sticker:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Legacy `.printable` class (older code) */
+  .printable, .printable * { visibility: visible !important; }
+  .printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  /* Color preserve for QR/barcode */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Barcode scanner — sweeping line */
+@keyframes scan-line {
+  0%   { transform: translateY(-90px); opacity: 0.2; }
+  50%  { opacity: 1; }
+  100% { transform: translateY(90px); opacity: 0.2; }
+}
+.animate-scan { animation: scan-line 1.8s ease-in-out infinite; }
