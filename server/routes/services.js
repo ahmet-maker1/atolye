@@ -49,21 +49,28 @@ router.post('/', (req, res) => {
   `).run(code, device_id, customer_id, external_device_info, external_customer,
          issue, parts_cost || 0, labor_cost || 0, technician_id, note, created_by);
 
-  // Eğer dahili cihazsa transactions tablosuna da yansıt (masraf olarak)
+  // ─── KASA YANSIMASI ─────────────────────────────────────────
+  // Maliyet (parça) → kasadan çıkış
+  // Servis satış fiyatı (işçilik) → kasaya giriş
+  if (parts_cost > 0) {
+    db.prepare(`
+      INSERT INTO cash_flow (type, amount, category, note, device_id, created_by)
+      VALUES ('out', ?, 'Servis maliyeti', ?, ?, ?)
+    `).run(parts_cost, `${code} — maliyet (parça)`, device_id || null, created_by);
+  }
+  if (labor_cost > 0) {
+    db.prepare(`
+      INSERT INTO cash_flow (type, amount, category, note, device_id, created_by)
+      VALUES ('in', ?, 'Servis satışı', ?, ?, ?)
+    `).run(labor_cost, `${code} — servis satış fiyatı`, device_id || null, created_by);
+  }
+
+  // Dahili cihazsa: cihaz status'ünü güncelle + maliyeti cihaza yaz (kar hesabı için)
   if (device_id) {
-    if (parts_cost > 0) {
-      db.prepare(`
-        INSERT INTO transactions (device_id, type, amount, note, created_by)
-        VALUES (?, 'service', ?, ?, ?)
-      `).run(device_id, parts_cost, `${code} — ${issue} (parça)`, created_by);
-    }
-    if (labor_cost > 0) {
-      db.prepare(`
-        INSERT INTO transactions (device_id, type, amount, note, created_by)
-        VALUES (?, 'labor', ?, ?, ?)
-      `).run(device_id, labor_cost, `${code} — ${issue} (işçilik)`, created_by);
-    }
     db.prepare("UPDATE devices SET status = 'serviste' WHERE id = ?").run(device_id);
+    if (parts_cost > 0) {
+      db.prepare("UPDATE devices SET expenses = expenses + ? WHERE id = ?").run(parts_cost, device_id);
+    }
   }
 
   const created = db.prepare('SELECT * FROM service_tickets WHERE id = ?').get(info.lastInsertRowid);

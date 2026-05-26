@@ -99,8 +99,8 @@ export default function Service() {
             <div className="col-span-3">Cihaz / Müşteri</div>
             <div className="col-span-3">Arıza</div>
             <div className="col-span-1">Teknisyen</div>
-            <div className="col-span-1 text-right">Parça</div>
-            <div className="col-span-1 text-right">İşçilik</div>
+            <div className="col-span-1 text-right">Maliyet</div>
+            <div className="col-span-1 text-right">Servis fiyatı</div>
             <div className="col-span-1 text-right">Durum</div>
           </div>
           {tickets.map(t => (
@@ -164,8 +164,8 @@ export default function Service() {
                 {t.technician_name || '—'}
               </span>
               <div className="flex gap-3">
-                {t.parts_cost > 0 && <span style={{ color: C.warn }}>P: {tl(t.parts_cost)}</span>}
-                {t.labor_cost > 0 && <span style={{ color: C.warn }}>İ: {tl(t.labor_cost)}</span>}
+                {t.parts_cost > 0 && <span style={{ color: C.bad }}>M: {tl(t.parts_cost)}</span>}
+                {t.labor_cost > 0 && <span style={{ color: C.ok }}>S: {tl(t.labor_cost)}</span>}
               </div>
             </div>
 
@@ -306,14 +306,14 @@ function ServiceForm({ onClose, onSaved }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                Parça (₺)
+                Maliyet (₺) <span style={{ color: C.bad }}>kasadan çıkar</span>
               </label>
               <input type="number" min="0" step="10" value={form.parts_cost} onChange={e => up('parts_cost', e.target.value)}
                 className="w-full px-3 py-2 text-sm border outline-none font-mono" style={inputStyle} />
             </div>
             <div>
               <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                İşçilik (₺)
+                Servis satış fiyatı (₺) <span style={{ color: C.ok }}>kasaya girer</span>
               </label>
               <input type="number" min="0" step="10" value={form.labor_cost} onChange={e => up('labor_cost', e.target.value)}
                 className="w-full px-3 py-2 text-sm border outline-none font-mono" style={inputStyle} />

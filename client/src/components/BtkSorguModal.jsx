@@ -135,7 +135,7 @@ export default function BtkSorguModal({ imei, onClose }) {
               className="flex-1 py-3 text-xs font-mono inline-flex items-center justify-center gap-2"
               style={{ background: C.accent, color: '#fff' }}>
               <ExternalLink size={13} />
-              {popupOpen ? 'PENCEREYİ ÖNE AL' : 'E-DEVLET\'TE AÇ'}
+              {popupOpen ? 'PENCEREYİ ÖNE AL' : `E-DEVLET'TE AÇ`}
             </button>
           </div>
         </div>

@@ -43,6 +43,8 @@ export default function DeviceEditModal({ device, onClose, onSaved }) {
     note: device.note || '',
     buy_price: device.buy_price || 0,
     sell_price: device.sell_price || 0,
+    // Mevcut kondisyon "Sıfır / Kutulu" ise toggle otomatik açık gelir
+    is_new: device.condition === 'Sıfır / Kutulu',
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
@@ -55,12 +57,14 @@ export default function DeviceEditModal({ device, onClose, onSaved }) {
     try {
       const payload = {
         ...form,
-        battery: Number(form.battery),
-        buy_price: Number(form.buy_price),
-        sell_price: Number(form.sell_price),
-        warranty_end: form.warranty_end || null,
+        battery:       form.is_new ? 100 : Number(form.battery),
+        condition:     form.is_new ? 'Sıfır / Kutulu' : form.condition,
+        buy_price:     Number(form.buy_price),
+        sell_price:    Number(form.sell_price),
+        warranty_end:  form.warranty_end || null,
         supplier_name: form.supplier_name?.trim() || null,
         customer_name: form.customer_name?.trim() || null,
+        is_new: undefined, // UI-only flag, backend görmez
       };
       await api.deviceUpdate(device.id, payload);
       onSaved();
@@ -90,6 +94,38 @@ export default function DeviceEditModal({ device, onClose, onSaved }) {
         </div>
 
         <form onSubmit={submit} className="p-4 sm:p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* Cihaz türü — sıfır mı, ikinci el mi */}
+          <div className="p-3 border" style={{ background: C.paperDeep, borderColor: C.line }}>
+            <div className="text-[10px] uppercase tracking-[0.18em] font-mono mb-2" style={{ color: C.muted }}>
+              Cihaz türü
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
+                style={{
+                  background: !form.is_new ? C.ink : C.paperLite,
+                  color: !form.is_new ? C.paper : C.ink,
+                  border: `1px solid ${C.line}`,
+                }}>
+                <input type="radio" name="is_new_edit" checked={!form.is_new} onChange={() => up('is_new', false)} className="sr-only" />
+                İkinci el
+              </label>
+              <label className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
+                style={{
+                  background: form.is_new ? C.accent : C.paperLite,
+                  color: form.is_new ? '#fff' : C.ink,
+                  border: `1px solid ${C.line}`,
+                }}>
+                <input type="radio" name="is_new_edit" checked={form.is_new} onChange={() => up('is_new', true)} className="sr-only" />
+                ⚡ Sıfır cihaz
+              </label>
+            </div>
+            {form.is_new && (
+              <div className="text-[10px] mt-2 font-mono" style={{ color: C.muted }}>
+                ⓘ Batarya %100 ve kondisyon "Sıfır / Kutulu" otomatik atanır.
+              </div>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Input form={form} up={up} label="Marka" k="brand" />
             <Input form={form} up={up} label="Model" k="model" />
@@ -97,21 +133,25 @@ export default function DeviceEditModal({ device, onClose, onSaved }) {
             <Input form={form} up={up} label="Hafıza" k="storage" />
             <Input form={form} up={up} label="RAM" k="ram" />
             <Input form={form} up={up} label="Ekran" k="screen" />
-            <Input form={form} up={up} label="Batarya %" k="battery" type="number" min="0" max="100" />
+            {!form.is_new && (
+              <Input form={form} up={up} label="Batarya %" k="battery" type="number" min="0" max="100" />
+            )}
             <Input form={form} up={up} label="Raf" k="shelf" />
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
-                Durum (kondisyon)
-              </label>
-              <select value={form.condition} onChange={e => up('condition', e.target.value)}
-                className="w-full px-3 py-2 text-sm border outline-none"
-                style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}>
-                <option>A temiz</option>
-                <option>B kullanım izleri</option>
-                <option>B ekran çatlak</option>
-                <option>C anakart arızalı</option>
-              </select>
-            </div>
+            {!form.is_new && (
+              <div>
+                <label className="block text-[10px] uppercase tracking-[0.15em] font-mono mb-1" style={{ color: C.muted }}>
+                  Durum (kondisyon)
+                </label>
+                <select value={form.condition} onChange={e => up('condition', e.target.value)}
+                  className="w-full px-3 py-2 text-sm border outline-none"
+                  style={{ borderColor: C.line, color: C.ink, background: C.paperLite }}>
+                  <option>A temiz</option>
+                  <option>B kullanım izleri</option>
+                  <option>B ekran çatlak</option>
+                  <option>C anakart arızalı</option>
+                </select>
+              </div>
+            )}
             <Input form={form} up={up} label="Garanti bitiş tarihi" k="warranty_end" type="date" />
           </div>
 
